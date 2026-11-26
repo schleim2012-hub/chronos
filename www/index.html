@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#080604">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>CHRONOS — The Hidden Archive</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <div id="app">
+    <section id="screen-seal" class="screen is-active" data-screen="seal">
+      <div class="seal-wrap"><img src="img/ui/seal.png" alt="Siegel des Archivs"></div>
+      <p class="whisper">Berühre das Siegel</p>
+      <p class="subwhisper">Zugang zum verborgenen Archiv</p>
+    </section>
+
+    <section id="screen-boot" class="screen is-hidden" data-screen="boot">
+      <div class="boot-log cursor-blink" id="boot-log"></div>
+      <button class="skip hidden" id="boot-skip" type="button">ÜBERGEHEN</button>
+    </section>
+
+    <section id="screen-menu" class="screen is-hidden" data-screen="menu">
+      <div class="chrome">
+        <span></span>
+        <button class="icon-btn" type="button" data-mute aria-pressed="false">TON</button>
+      </div>
+      <div class="brand">
+        <p class="kicker">KLASSIFIZIERT · LOKALES ARCHIV</p>
+        <h2>CHRONOS</h2>
+        <span class="sub">The Hidden Archive</span>
+      </div>
+      <div class="today-chip" id="menu-today"></div>
+      <nav class="nav">
+        <button class="card" type="button" data-go="kalender">
+          <canvas id="menu-glyph" width="108" height="108"></canvas>
+          <div>
+            <p class="lab">Tzolkin</p>
+            <p class="hint">Das Herzstück der Zählung</p>
+          </div>
+          <span class="chev">›</span>
+        </button>
+        <button class="card" type="button" data-go="archiv">
+          <canvas id="menu-arch" width="108" height="108"></canvas>
+          <div>
+            <p class="lab">Archiv</p>
+            <p class="hint">Drei versiegelte Fragmente</p>
+          </div>
+          <span class="chev">›</span>
+        </button>
+        <button class="card" type="button" data-go="rv">
+          <canvas id="menu-rv" width="108" height="108"></canvas>
+          <div>
+            <p class="lab">Remote Viewing</p>
+            <p class="hint">Der mentale Muskel</p>
+          </div>
+          <span class="chev">›</span>
+        </button>
+      </nav>
+      <p class="foot" id="menu-foot">Archivar bereit</p>
+    </section>
+
+    <section id="screen-kalender" class="screen is-hidden" data-screen="kalender">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Tzolkin</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <div class="cal-scroll">
+        <p class="date-line" id="cal-date"></p>
+        <div class="glyph-stage"><canvas id="cal-glyph" width="360" height="360"></canvas></div>
+        <div class="numeral">
+          <canvas id="cal-bars" width="200" height="80"></canvas>
+          <p class="num-arabic" id="cal-num"></p>
+          <h2 class="sign-name" id="cal-name"></h2>
+          <p class="tone" id="cal-tone"></p>
+        </div>
+        <p class="meaning" id="cal-meaning"></p>
+        <p class="blurb" id="cal-blurb"></p>
+        <p class="kin" id="cal-kin"></p>
+        <div class="day-nav">
+          <button type="button" id="cal-prev">‹ Vorheriger</button>
+          <button type="button" class="today" id="cal-today">Heute</button>
+          <button type="button" id="cal-next">Nächster ›</button>
+        </div>
+        <p class="caption">Das Rad der 260 Tage · 13 Töne, 20 Zeichen</p>
+        <div class="wheel-wrap"><canvas id="cal-wheel" width="680" height="680"></canvas></div>
+      </div>
+    </section>
+
+    <section id="screen-archiv" class="screen is-hidden" data-screen="archiv">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Archiv</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <p class="file-intro">Drei Dateien liegen unter dem Siegel. Sie entfalten sich erst, wenn du sie öffnest – als hätte jemand gerade erst begonnen, sie zu lesen.</p>
+      <p class="progress" id="arch-progress">Fragment 0/3 entschlüsselt</p>
+      <div class="files" id="arch-files"></div>
+    </section>
+
+    <section id="screen-fragment" class="screen is-hidden" data-screen="fragment">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ARCHIV</button>
+        <h1>Fragment</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <p class="frag-head" id="frag-head"></p>
+      <h2 class="frag-title" id="frag-title"></h2>
+      <div class="frag-body decoding" id="frag-body"></div>
+      <div class="decrypt-bar" id="frag-bar"><span></span></div>
+    </section>
+
+    <section id="screen-rv" class="screen is-hidden" data-screen="rv">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Remote Viewing</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <div class="scroll" id="rv-scroll">
+        <div id="rv-idle">
+          <p class="rv-intro">Fünf Minuten. Atme. Halte den Blick weich. Schreibe oder zeichne, was kommt: Formen, Farben, Materialien, Stimmungen. Versuche nicht zu raten. Am Ende wird das Zielbild enthüllt.</p>
+          <button class="primary" type="button" id="rv-start">Sitzung beginnen</button>
+          <div class="log" id="rv-log"></div>
+        </div>
+        <div id="rv-session" class="hidden">
+          <div class="timer" id="rv-timer">5:00</div>
+          <div class="row">
+            <button class="text-btn danger" type="button" id="rv-abort">Abbrechen</button>
+            <button class="primary" type="button" id="rv-end">Ziel offenbaren</button>
+          </div>
+          <label class="field" for="rv-notes">Eindrücke</label>
+          <textarea id="rv-notes" placeholder="Farben, Formen, Temperatur, Materialien, Stimmung …"></textarea>
+          <label class="field">Zeichenfläche</label>
+          <div class="draw-tools">
+            <button class="text-btn" type="button" id="rv-pen">Stift</button>
+            <button class="text-btn" type="button" id="rv-eraser">Radierer</button>
+            <button class="text-btn" type="button" id="rv-clear">Leeren</button>
+          </div>
+          <canvas id="rv-canvas" width="800" height="360"></canvas>
+        </div>
+        <div id="rv-reveal" class="hidden">
+          <p class="tone">Das Zielbild</p>
+          <div class="target-card">
+            <img id="rv-image" alt="Zielbild der Sitzung">
+            <p class="cap" id="rv-caption"></p>
+          </div>
+          <p class="blurb" id="rv-compare" style="margin-top:14px"></p>
+          <button class="primary" type="button" id="rv-again" style="margin-top:10px">Neue Sitzung</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/tzolkin.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/gfx.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
