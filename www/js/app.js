@@ -43,7 +43,12 @@
     screen: "seal",
     calDate: new Date(),
     unlocked: loadUnlocked(),
-    rv: null
+    rv: null,
+    intention: loadIntention(),
+    intentTarget: null,
+    intentAsked: false,
+    atem: { running: false, start: 0, cycles: 0, raf: 0 },
+    traum: { timer: 0, endAt: 0, start: 0 }
   };
 
   function loadUnlocked() {
@@ -57,6 +62,27 @@
   }
   function saveLog(list) {
     try { localStorage.setItem("chronos.rvlog", JSON.stringify(list.slice(0, 20))); } catch (e) {}
+  }
+  function loadIntention() {
+    try {
+      const o = JSON.parse(localStorage.getItem("chronos.intention") || "null");
+      return (o && o.text) ? String(o.text).slice(0, 90) : "";
+    } catch (e) { return ""; }
+  }
+  function setIntention(text) {
+    state.intention = (text || "").trim().slice(0, 90);
+    try { localStorage.setItem("chronos.intention", JSON.stringify({ text: state.intention, at: Date.now() })); } catch (e) {}
+    paintWatermark();
+  }
+  function paintWatermark() {
+    const el = document.getElementById("watermark");
+    if (el) el.textContent = state.intention || "";
+  }
+  function loadDreams() {
+    try { return JSON.parse(localStorage.getItem("chronos.dreams") || "[]"); } catch (e) { return []; }
+  }
+  function saveDreams(list) {
+    try { localStorage.setItem("chronos.dreams", JSON.stringify(list.slice(0, 20))); } catch (e) {}
   }
 
   function vibrate(ms) {
@@ -107,6 +133,9 @@
     if (name === "archiv") renderArchive();
     if (name === "rv") renderRvIdle();
     if (name === "mandala") enterMandala();
+    if (name === "intention") enterIntention();
+    if (name === "atem") enterAtem();
+    if (name === "traum") enterTraum();
   }
 
   /* ---------- Siegel / Boot ---------- */
@@ -184,6 +213,23 @@
         m.lineTo(54 + Math.cos(a) * 34, 54 + Math.sin(a) * 34);
         m.stroke();
       }
+    }
+
+    const at = $("menu-atem");
+    if (at) {
+      const ac = at.getContext("2d");
+      ac.clearRect(0, 0, 108, 108);
+      ac.strokeStyle = "#e4c37a"; ac.lineWidth = 1.5;
+      ac.beginPath(); ac.arc(54, 54, 26, 0, Math.PI * 2); ac.stroke();
+      ac.beginPath(); ac.arc(54, 54, 16, -Math.PI / 2, Math.PI); ac.stroke();
+    }
+    const tr = $("menu-traum");
+    if (tr) {
+      const d = tr.getContext("2d");
+      d.clearRect(0, 0, 108, 108);
+      d.strokeStyle = "#e4c37a"; d.lineWidth = 1.5;
+      d.beginPath(); d.arc(54, 48, 22, 0.2 * Math.PI, 1.7 * Math.PI); d.stroke();
+      d.beginPath(); d.arc(70, 42, 10, 0, Math.PI * 2); d.stroke();
     }
   }
 
@@ -330,9 +376,10 @@
     }
     box.innerHTML = "<h3>Sitzungsprotokoll</h3>" + log.map(function (e) {
       const notes = e.notes ? '<p class="notes">„' + escapeHtml(e.notes) + '“</p>' : "";
+      const intent = e.intention ? '<p class="notes">Intention: ' + escapeHtml(e.intention) + "</p>" : "";
       return '<div class="log-item"><strong>' + escapeHtml(e.targetLabel) + "</strong> · "
         + escapeHtml(e.when) + " · " + escapeHtml(e.duration)
-        + (e.drew ? " · mit Zeichnung" : "") + notes + "</div>";
+        + (e.drew ? " · mit Zeichnung" : "") + intent + notes + "</div>";
     }).join("");
   }
 
@@ -394,7 +441,8 @@
       when: Tzolkin.formatDateShort(new Date()) + " " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
       duration: fmtMs(elapsed),
       notes: notes.slice(0, 400),
-      drew: !!drew
+      drew: !!drew,
+      intention: state.intention || ""
     };
     const log = loadLog();
     log.unshift(entry);
@@ -477,6 +525,198 @@
     ctx.stroke();
   }
   function endDraw() { draw.drawing = false; }
+
+  /* ---------- Intention, Atem, Traum ---------- */
+  const NAP_MS = 20 * 60 * 1000;
+  const BREATH_PHASES = [
+    { id: "in", label: "Einatmen", cue: "in", to: 1 },
+    { id: "hold", label: "Halten", cue: "hold", to: 1 },
+    { id: "out", label: "Ausatmen", cue: "out", to: 0 },
+    { id: "hold2", label: "Halten", cue: "hold2", to: 0 }
+  ];
+
+  function requestScreen(name) {
+    if (window.ChronosProgress && !ChronosProgress.canEnter(name)) {
+      ChronosAudio.glitch();
+      vibrate(8);
+      return;
+    }
+    if ((name === "archiv" || name === "rv") && !state.intentAsked) {
+      state.intentTarget = name;
+      show("intention");
+      return;
+    }
+    show(name);
+  }
+
+  function enterIntention() {
+    $("intent-field").value = state.intention || "";
+  }
+
+  function enterAtem() {
+    $("atem-cycles").textContent = "Zyklen: " + state.atem.cycles;
+    $("atem-toggle").textContent = state.atem.running ? "Anhalten" : "Beginnen";
+    if (!state.atem.running) {
+      $("atem-phase").textContent = "Bereit";
+      $("atem-sub").textContent = "Berühre Beginnen";
+      $("atem-wheel").style.setProperty("--breath", "0.82");
+      ChronosGfx.setPulse(0);
+    }
+  }
+
+  function startAtem() {
+    state.atem.running = true;
+    state.atem.start = performance.now();
+    state.atem._phase = -1;
+    $("atem-toggle").textContent = "Anhalten";
+    if (state.atem.raf) cancelAnimationFrame(state.atem.raf);
+    tickAtem();
+  }
+
+  function stopAtem(silent) {
+    state.atem.running = false;
+    if (state.atem.raf) cancelAnimationFrame(state.atem.raf);
+    state.atem.raf = 0;
+    ChronosGfx.setPulse(0);
+    $("atem-toggle").textContent = "Beginnen";
+    $("atem-phase").textContent = "Bereit";
+    $("atem-sub").textContent = "Zyklen bisher: " + state.atem.cycles;
+    $("atem-wheel").style.setProperty("--breath", "0.82");
+    if (!silent) ChronosAudio.click();
+  }
+
+  function tickAtem(now) {
+    if (!state.atem.running || current !== "atem") return;
+    now = now || performance.now();
+    const elapsed = now - state.atem.start;
+    const phaseLen = 4000;
+    const cycleLen = phaseLen * 4;
+    const cyclesDone = Math.floor(elapsed / cycleLen);
+    if (cyclesDone !== state.atem.cycles) {
+      state.atem.cycles = cyclesDone;
+      $("atem-cycles").textContent = "Zyklen: " + state.atem.cycles;
+    }
+    const inCycle = elapsed % cycleLen;
+    const idx = Math.min(3, Math.floor(inCycle / phaseLen));
+    const ph = BREATH_PHASES[idx];
+    const local = (inCycle % phaseLen) / phaseLen;
+    const prev = idx === 0 ? 0 : BREATH_PHASES[idx - 1].to;
+    const pulse = prev + (ph.to - prev) * easeInOut(local);
+    ChronosGfx.setPulse(pulse);
+    $("atem-wheel").style.setProperty("--breath", String(0.78 + pulse * 0.34));
+    $("atem-phase").textContent = ph.label;
+    $("atem-sub").textContent = Math.ceil((1 - local) * 4) + " Sekunden";
+    const phaseKey = idx + cyclesDone * 4;
+    if (state.atem._phase !== phaseKey) {
+      state.atem._phase = phaseKey;
+      ChronosAudio.breathCue(ph.cue);
+      vibrate(8);
+    }
+    state.atem.raf = requestAnimationFrame(tickAtem);
+  }
+
+  function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  function enterTraum() {
+    if (state.traum.timer) setTraumView("nap");
+    else setTraumView("idle");
+    renderDreamLog();
+  }
+
+  function setTraumView(which) {
+    $("traum-idle").classList.toggle("hidden", which !== "idle");
+    $("traum-nap").classList.toggle("hidden", which !== "nap");
+    $("traum-wake").classList.toggle("hidden", which !== "wake");
+    document.body.classList.toggle("is-nap", which === "nap");
+  }
+
+  function napLock(on) {
+    try {
+      if (on && navigator.wakeLock) {
+        navigator.wakeLock.request("screen").then(function (s) { state.traum.wake = s; }).catch(function () {});
+      } else if (!on && state.traum.wake) {
+        try { state.traum.wake.release(); } catch (e) {}
+        state.traum.wake = null;
+      }
+    } catch (e) {}
+    if (window.ChronosNative) {
+      try { if (ChronosNative.keepAwake) ChronosNative.keepAwake(!!on); } catch (e) {}
+      try { if (ChronosNative.setDim) ChronosNative.setDim(on ? 0.07 : 1); } catch (e) {}
+    }
+  }
+
+  function startNap(ms) {
+    const dur = ms || NAP_MS;
+    state.traum.start = Date.now();
+    state.traum.endAt = Date.now() + dur;
+    setTraumView("nap");
+    napLock(true);
+    ChronosAudio.bell(216, 1.2, 0.07);
+    tickNap();
+    if (state.traum.timer) clearInterval(state.traum.timer);
+    state.traum.timer = setInterval(tickNap, 200);
+  }
+
+  function tickNap() {
+    const left = state.traum.endAt - Date.now();
+    $("traum-timer").textContent = fmtMs(left);
+    if (left <= 0) wakeNap();
+  }
+
+  function abortNap(silent) {
+    if (!state.traum.timer && !state.traum.endAt) {
+      setTraumView("idle");
+      napLock(false);
+      return;
+    }
+    if (state.traum.timer) clearInterval(state.traum.timer);
+    state.traum.timer = 0;
+    state.traum.endAt = 0;
+    napLock(false);
+    setTraumView("idle");
+    document.body.classList.remove("is-nap");
+    if (!silent) ChronosAudio.click();
+  }
+
+  function wakeNap() {
+    if (state.traum.timer) clearInterval(state.traum.timer);
+    state.traum.timer = 0;
+    state.traum.endAt = 0;
+    napLock(false);
+    setTraumView("wake");
+    $("traum-notes").value = "";
+    ChronosAudio.gong();
+    vibrate([40, 80, 40, 80, 60]);
+  }
+
+  function saveDream() {
+    const text = ($("traum-notes").value || "").trim();
+    const list = loadDreams();
+    list.unshift({
+      when: Tzolkin.formatDateShort(new Date()) + " " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+      text: text.slice(0, 600),
+      duration: fmtMs(Date.now() - (state.traum.start || Date.now())),
+      intention: state.intention || ""
+    });
+    saveDreams(list);
+    ChronosAudio.bell(392, 1.2, 0.09);
+    vibrate(20);
+    setTraumView("idle");
+    renderDreamLog();
+  }
+
+  function renderDreamLog() {
+    const box = $("traum-log");
+    if (!box) return;
+    const list = loadDreams();
+    if (!list.length) { box.innerHTML = ""; return; }
+    box.innerHTML = "<h3>Journal</h3>" + list.map(function (e) {
+      const notes = e.text ? '<p class="notes">„' + escapeHtml(e.text) + '“</p>' : "";
+      const intent = e.intention ? '<p class="notes">Intention: ' + escapeHtml(e.intention) + "</p>" : "";
+      return '<div class="log-item"><strong>' + escapeHtml(e.when) + "</strong> · " + escapeHtml(e.duration) + intent + notes + "</div>";
+    }).join("");
+  }
+
 
   /* ---------- Mandala ---------- */
   const mandala = {
@@ -614,7 +854,11 @@
       show("archiv");
       return true;
     }
-    if (current === "kalender" || current === "archiv" || current === "rv" || current === "mandala") {
+    if (current === "intention") {
+      show("menu");
+      return true;
+    }
+    if (current === "kalender" || current === "archiv" || current === "rv" || current === "mandala" || current === "atem" || current === "traum") {
       if (current === "rv" && state.rv && !state.rv.ended) {
         abortSession();
       }
@@ -623,6 +867,8 @@
         show("rv");
         return true;
       }
+      if (current === "atem") stopAtem(true);
+      if (current === "traum") abortNap(true);
       show("menu");
       return true;
     }
@@ -652,9 +898,31 @@
         ChronosAudio.unlock();
         ChronosAudio.click();
         vibrate(12);
-        show(btn.getAttribute("data-go"));
+        requestScreen(btn.getAttribute("data-go"));
       });
     });
+    $("intent-enter").addEventListener("click", function () {
+      setIntention($("intent-field").value);
+      state.intentAsked = true;
+      ChronosAudio.bell(392, 0.8, 0.08);
+      const dest = state.intentTarget || "menu";
+      state.intentTarget = null;
+      show(dest);
+    });
+    $("intent-skip").addEventListener("click", function () {
+      state.intentAsked = true;
+      ChronosAudio.click();
+      const dest = state.intentTarget || "menu";
+      state.intentTarget = null;
+      show(dest);
+    });
+    $("atem-toggle").addEventListener("click", function () {
+      if (state.atem.running) stopAtem(false);
+      else startAtem();
+    });
+    $("traum-start").addEventListener("click", function () { startNap(); });
+    $("traum-abort").addEventListener("click", function () { abortNap(false); });
+    $("traum-save").addEventListener("click", saveDream);
     document.querySelectorAll("[data-back]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         ChronosAudio.click();
@@ -722,6 +990,7 @@
     if (!ok) console.warn("Tzolkin-Prüfung fehlgeschlagen");
     ChronosGfx.startBackground($("bg"));
     ChronosAudio.initMuteState();
+    paintWatermark();
     document.getElementById("screen-seal").classList.add("is-active");
     bind();
     paintMenuIcons();

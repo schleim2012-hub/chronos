@@ -74,6 +74,22 @@
           </div>
           <span class="chev">›</span>
         </button>
+        <button class="card" type="button" data-go="atem" id="card-atem">
+          <canvas id="menu-atem" width="108" height="108"></canvas>
+          <div>
+            <p class="lab">Atem</p>
+            <p class="hint">Box Breathing 4-4-4-4</p>
+          </div>
+          <span class="chev">›</span>
+        </button>
+        <button class="card" type="button" data-go="traum" id="card-traum">
+          <canvas id="menu-traum" width="108" height="108"></canvas>
+          <div>
+            <p class="lab">Traum-Decoder</p>
+            <p class="hint">Zwanzig Minuten, dann Bilder</p>
+          </div>
+          <span class="chev">›</span>
+        </button>
       </nav>
       <p class="foot" id="menu-foot">Archivar bereit</p>
     </section>
@@ -184,6 +200,62 @@
         <button class="primary" type="button" id="mandala-save">In die Galerie</button>
       </div>
       <div class="gallery" id="mandala-gallery"></div>
+    </section>
+
+    <section id="screen-intention" class="screen is-hidden" data-screen="intention">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Intention</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <div class="intent-wrap">
+        <p class="whisper" style="letter-spacing:.2em">Welche Wahrheit suchst du heute?</p>
+        <textarea id="intent-field" maxlength="90" rows="3" placeholder="Ein Satz genügt. Er bleibt als leises Wasserzeichen."></textarea>
+        <button class="primary" type="button" id="intent-enter">Eintreten</button>
+        <button class="text-btn" type="button" id="intent-skip" style="width:100%;margin-top:10px">Ohne Satz eintreten</button>
+      </div>
+    </section>
+
+    <section id="screen-atem" class="screen is-hidden" data-screen="atem">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Atem</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <p class="file-intro">Vier Sekunden ein, vier halten, vier aus, vier halten. Das Rad atmet mit dir.</p>
+      <div class="breath-stage">
+        <div class="breath-wheel" id="atem-wheel"></div>
+        <p class="breath-phase" id="atem-phase">Bereit</p>
+        <p class="breath-sub" id="atem-sub">Berühre Beginnen</p>
+      </div>
+      <p class="kin" id="atem-cycles">Zyklen: 0</p>
+      <button class="primary" type="button" id="atem-toggle">Beginnen</button>
+    </section>
+
+    <section id="screen-traum" class="screen is-hidden" data-screen="traum">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Traum-Decoder</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <div class="scroll" id="traum-scroll">
+        <div id="traum-idle">
+          <p class="rv-intro">Zwanzig Minuten Power-Nap. Der Bildschirm verdunkelt sich. Ein Gong weckt dich, danach hältst du fest, was an der Schwelle zum Schlaf erschienen ist.</p>
+          <button class="primary" type="button" id="traum-start">Niederlegen</button>
+          <div class="log" id="traum-log"></div>
+        </div>
+        <div id="traum-nap" class="hidden dim-nap">
+          <p class="tone">Ruhe</p>
+          <div class="timer" id="traum-timer">20:00</div>
+          <p class="file-intro">Die Augen dürfen fallen.</p>
+          <button class="text-btn danger" type="button" id="traum-abort" style="width:100%">Vorzeitig beenden</button>
+        </div>
+        <div id="traum-wake" class="hidden">
+          <p class="whisper" style="letter-spacing:.18em;margin-bottom:16px">Welche Bilder sind aufgestiegen?</p>
+          <textarea id="traum-notes" placeholder="Farben, Gesichter, Orte, ein Satz, ein Gefühl …"></textarea>
+          <button class="primary" type="button" id="traum-save" style="margin-top:12px">Im Journal halten</button>
+        </div>
+      </div>
     </section>
   </div>
 
