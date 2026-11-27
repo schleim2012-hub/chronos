@@ -94,6 +94,10 @@
     activate(next);
     current = name;
     state.screen = name;
+    if (window.ChronosAudio) {
+      const room = name === "fragment" ? "archiv" : name;
+      ChronosAudio.setRoom(room);
+    }
     onEnter(name);
   }
 
