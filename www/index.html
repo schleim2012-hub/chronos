@@ -66,6 +66,14 @@
           </div>
           <span class="chev">›</span>
         </button>
+        <button class="card" type="button" data-go="mandala">
+          <canvas id="menu-mandala" width="108" height="108"></canvas>
+          <div>
+            <p class="lab">Mandala</p>
+            <p class="hint">Liminale Malerei</p>
+          </div>
+          <span class="chev">›</span>
+        </button>
       </nav>
       <p class="foot" id="menu-foot">Archivar bereit</p>
     </section>
@@ -131,6 +139,7 @@
         <div id="rv-idle">
           <p class="rv-intro">Fünf Minuten. Atme. Halte den Blick weich. Schreibe oder zeichne, was kommt: Formen, Farben, Materialien, Stimmungen. Versuche nicht zu raten. Am Ende wird das Zielbild enthüllt.</p>
           <button class="primary" type="button" id="rv-start">Sitzung beginnen</button>
+          <button class="text-btn" type="button" id="rv-warmup" style="width:100%;margin-top:10px">Zuerst das Mandala als Aufwärmung</button>
           <div class="log" id="rv-log"></div>
         </div>
         <div id="rv-session" class="hidden">
@@ -160,11 +169,28 @@
         </div>
       </div>
     </section>
+    <section id="screen-mandala" class="screen is-hidden" data-screen="mandala">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Mandala</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <p class="file-intro" id="mandala-intro">Berühre die Formen. Die Farbe spiegelt sich im Kreis. Ein neues Muster entsteht jedes Mal von selbst.</p>
+      <div class="palette" id="mandala-palettes"></div>
+      <div class="swatches" id="mandala-swatches"></div>
+      <div class="mandala-stage"><canvas id="mandala-cv" width="800" height="800"></canvas></div>
+      <div class="row" style="margin-top:8px">
+        <button class="text-btn" type="button" id="mandala-new">Neues Mandala</button>
+        <button class="primary" type="button" id="mandala-save">In die Galerie</button>
+      </div>
+      <div class="gallery" id="mandala-gallery"></div>
+    </section>
   </div>
 
   <script src="js/tzolkin.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/gfx.js"></script>
+  <script src="js/mandala.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -106,6 +106,7 @@
     if (name === "kalender") renderCalendar();
     if (name === "archiv") renderArchive();
     if (name === "rv") renderRvIdle();
+    if (name === "mandala") enterMandala();
   }
 
   /* ---------- Siegel / Boot ---------- */
@@ -169,6 +170,21 @@
     r.beginPath(); r.arc(54, 54, 28, 0, Math.PI * 2); r.stroke();
     r.beginPath(); r.ellipse(54, 54, 28, 12, 0, 0, Math.PI * 2); r.stroke();
     r.beginPath(); r.arc(54, 54, 6, 0, Math.PI * 2); r.stroke();
+
+    const md = $("menu-mandala");
+    if (md) {
+      const m = md.getContext("2d");
+      m.clearRect(0, 0, 108, 108);
+      m.strokeStyle = "#e4c37a"; m.lineWidth = 1.3;
+      for (let i = 1; i <= 3; i++) { m.beginPath(); m.arc(54, 54, 8 + i * 9, 0, Math.PI * 2); m.stroke(); }
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        m.beginPath();
+        m.moveTo(54 + Math.cos(a) * 12, 54 + Math.sin(a) * 12);
+        m.lineTo(54 + Math.cos(a) * 34, 54 + Math.sin(a) * 34);
+        m.stroke();
+      }
+    }
   }
 
   function renderMenu() {
@@ -462,6 +478,135 @@
   }
   function endDraw() { draw.drawing = false; }
 
+  /* ---------- Mandala ---------- */
+  const mandala = {
+    model: null,
+    palette: 0,
+    color: "#e4c37a",
+    raf: 0,
+    warmup: false
+  };
+
+  function fitMandala() {
+    const c = $("mandala-cv");
+    if (!c) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = c.clientWidth || 320, h = c.clientHeight || w;
+    if (c.width !== w * dpr || c.height !== h * dpr) {
+      c.width = w * dpr; c.height = h * dpr;
+    }
+    return { c, ctx: c.getContext("2d"), w, h, dpr };
+  }
+
+  function paintMandalaFrame() {
+    if (current !== "mandala") { mandala.raf = 0; return; }
+    const f = fitMandala();
+    if (f && mandala.model) {
+      f.ctx.setTransform(f.dpr, 0, 0, f.dpr, 0, 0);
+      ChronosMandala.drawMandala(f.ctx, mandala.model, f.w, f.h);
+      if (ChronosMandala.tickAnims(mandala.model, 16)) {
+        mandala.raf = requestAnimationFrame(paintMandalaFrame);
+        return;
+      }
+    }
+    mandala.raf = 0;
+  }
+
+  function newMandala(seed) {
+    mandala.model = ChronosMandala.generate(seed || (Date.now() ^ (Math.random() * 0x7fffffff | 0)));
+    paintMandalaFrame();
+  }
+
+  function renderPalettes() {
+    const box = $("mandala-palettes");
+    const sw = $("mandala-swatches");
+    if (!box || !sw) return;
+    box.innerHTML = "";
+    ChronosMandala.PALETTES.forEach(function (p, i) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pal-btn" + (i === mandala.palette ? " is-on" : "");
+      b.textContent = p.name;
+      b.addEventListener("click", function () {
+        mandala.palette = i;
+        mandala.color = p.colors[0];
+        ChronosAudio.click();
+        renderPalettes();
+      });
+      box.appendChild(b);
+    });
+    sw.innerHTML = "";
+    ChronosMandala.PALETTES[mandala.palette].colors.forEach(function (col) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch" + (col === mandala.color ? " is-on" : "");
+      b.style.background = col;
+      b.setAttribute("aria-label", col);
+      b.addEventListener("click", function () {
+        mandala.color = col;
+        ChronosAudio.click();
+        renderPalettes();
+      });
+      sw.appendChild(b);
+    });
+  }
+
+  function renderGallery() {
+    const box = $("mandala-gallery");
+    if (!box) return;
+    const list = ChronosMandala.loadGallery();
+    if (!list.length) {
+      box.innerHTML = '<span class="empty">Die Galerie ist noch leer.</span>';
+      return;
+    }
+    box.innerHTML = list.map(function (e) {
+      return '<img src="' + e.src + '" alt="Mandala vom ' + escapeHtml(e.when) + '">';
+    }).join("");
+  }
+
+  function enterMandala() {
+    renderPalettes();
+    renderGallery();
+    if (!mandala.model) newMandala();
+    else paintMandalaFrame();
+  }
+
+  function onMandalaTap(ev) {
+    ev.preventDefault();
+    const f = fitMandala();
+    if (!f || !mandala.model) return;
+    const rect = f.c.getBoundingClientRect();
+    const t = ev.touches ? ev.touches[0] : ev;
+    const x = t.clientX - rect.left;
+    const y = t.clientY - rect.top;
+    const sh = ChronosMandala.hit(mandala.model, x, y, f.w, f.h);
+    if (!sh) return;
+    ChronosMandala.paint(mandala.model, sh, mandala.color);
+    ChronosAudio.click();
+    vibrate(14);
+    if (mandala.raf) cancelAnimationFrame(mandala.raf);
+    paintMandalaFrame();
+  }
+
+  function saveMandala() {
+    const f = fitMandala();
+    if (!f || !mandala.model) return;
+    f.ctx.setTransform(f.dpr, 0, 0, f.dpr, 0, 0);
+    ChronosMandala.drawMandala(f.ctx, mandala.model, f.w, f.h);
+    const src = ChronosMandala.snapshot(f.c);
+    const list = ChronosMandala.loadGallery();
+    list.unshift({
+      id: Date.now(),
+      src: src,
+      seed: mandala.model.seed,
+      when: Tzolkin.formatDateShort(new Date())
+    });
+    ChronosMandala.saveGallery(list);
+    renderGallery();
+    ChronosAudio.bell(432, 1.1, 0.08);
+    vibrate(24);
+  }
+
   /* ---------- Navigation ---------- */
   function goBack() {
     if (current === "fragment") {
@@ -469,11 +614,14 @@
       show("archiv");
       return true;
     }
-    if (current === "kalender" || current === "archiv" || current === "rv") {
+    if (current === "kalender" || current === "archiv" || current === "rv" || current === "mandala") {
       if (current === "rv" && state.rv && !state.rv.ended) {
-        // stay in session; back goes to menu after abort confirm? just go menu and keep? Better abort prompt.
-        // For prototype: going back aborts silently? Let's go to menu only from idle/reveal; from session treat as abort.
         abortSession();
+      }
+      if (current === "mandala" && mandala.warmup) {
+        mandala.warmup = false;
+        show("rv");
+        return true;
       }
       show("menu");
       return true;
@@ -538,6 +686,19 @@
       renderCalendar();
     });
     $("rv-start").addEventListener("click", startSession);
+    $("rv-warmup").addEventListener("click", function () {
+      mandala.warmup = true;
+      ChronosAudio.click();
+      show("mandala");
+    });
+    $("mandala-new").addEventListener("click", function () {
+      ChronosAudio.click();
+      vibrate(10);
+      newMandala();
+    });
+    $("mandala-save").addEventListener("click", saveMandala);
+    $("mandala-cv").addEventListener("pointerdown", onMandalaTap);
+    $("mandala-cv").addEventListener("touchstart", onMandalaTap, { passive: false });
     $("rv-abort").addEventListener("click", abortSession);
     $("rv-end").addEventListener("click", function () { revealTarget(true); });
     $("rv-again").addEventListener("click", function () {
