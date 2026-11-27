@@ -241,3 +241,7 @@ body.is-nap #watermark{opacity:.4;}
 .unlock-veil p{color:var(--ink);font-style:italic;max-width:18em;}
 .options-link{display:block;text-align:center;font-family:"Share Tech Mono",monospace;font-size:10px;
   letter-spacing:.18em;color:var(--muted);margin-top:8px;background:none;border:0;padding:8px;cursor:pointer;}
+
+#screen-menu .nav{flex:1;min-height:0;overflow:auto;margin-top:10px;margin-bottom:4px;padding-right:2px;}
+#screen-menu .stage-chip,#screen-menu .foot,#screen-menu .options-link{flex:0 0 auto;}
+#screen-menu .card{padding:12px 14px;}
