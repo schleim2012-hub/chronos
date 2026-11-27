@@ -3,9 +3,51 @@
   const GOLD = "#e4c37a";
   const GOLD_DIM = "#9a7540";
 
+  /* ---------------- Parallax-Zustand ---------------- */
+  const tilt = { x: 0, y: 0, sx: 0, sy: 0 };
+  let pulse = 0;
+  let lastNativeTilt = 0;
+  const particles = [];
+  let fxCanvas = null;
+  let fxAlive = false;
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  function setTilt(x, y, fromNative) {
+    tilt.x = clamp(+x || 0, -1, 1);
+    tilt.y = clamp(+y || 0, -1, 1);
+    if (fromNative) lastNativeTilt = performance.now();
+  }
+
+  function setPulse(p) { pulse = clamp(p, 0, 1); }
+  function getPulse() { return pulse; }
+
+  function startTiltInput() {
+    window.addEventListener("deviceorientation", function (e) {
+      if (performance.now() - lastNativeTilt < 400) return;
+      if (e.gamma == null || e.beta == null) return;
+      setTilt(e.gamma / 28, (e.beta - 45) / 40, false);
+    }, true);
+    window.addEventListener("pointermove", function (e) {
+      if (performance.now() - lastNativeTilt < 800) return;
+      if (e.pointerType === "touch" && e.buttons === 0 && e.pressure === 0) {
+        /* some WebViews fire move without press; still use it as fallback */
+      }
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      setTilt(x * 0.65, y * 0.65, false);
+    }, { passive: true });
+    if (window.ChronosNative && ChronosNative.startTilt) {
+      try { ChronosNative.startTilt(); } catch (err) {}
+    }
+  }
+
   /* ---------------- WebGL / Canvas Hintergrund ---------------- */
-  function startBackground(canvas) {
-    const gl = canvas.getContext("webgl", { alpha: false, antialias: true, premultipliedAlpha: false });
+  function startBackground(canvas, fx) {
+    fxCanvas = fx || document.getElementById("fx");
+    startTiltInput();
+    startParticles();
+    const gl = canvas.getContext("webgl", { alpha: false, antialias: true, premultipliedAlpha: false, powerPreference: "low-power" });
     if (gl) return startGL(canvas, gl);
     return start2D(canvas);
   }
@@ -24,31 +66,41 @@
     const vs = "attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}";
     const fs = [
       "precision highp float;",
-      "uniform vec2 r; uniform float t;",
+      "uniform vec2 r; uniform float t; uniform vec2 par; uniform float pulse;",
       "float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
       "float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.-2.*f);",
       "return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}",
       "float fbm(vec2 p){float a=0.;float w=0.5;for(int i=0;i<5;i++){a+=w*noise(p);p*=2.03;w*=0.5;}return a;}",
       "void main(){",
-      "vec2 uv=gl_FragCoord.xy/r; vec2 p=(gl_FragCoord.xy-0.5*r)/min(r.x,r.y);",
-      "float rad=length(p); float ang=atan(p.y,p.x);",
+      "vec2 uv=gl_FragCoord.xy/r;",
+      "float aspect=min(r.x,r.y);",
+      "vec2 base=(gl_FragCoord.xy-0.5*r)/aspect;",
+      "vec2 pFar=base-par*0.028;",
+      "vec2 pMid=base-par*0.07;",
+      "vec2 pNear=base-par*0.12;",
+      "float radFar=length(pFar); float rad=length(pMid); float radNear=length(pNear);",
+      "float ang=atan(pMid.y,pMid.x);",
+      "float pr=1.0+pulse*0.055;",
       "vec3 col=vec3(0.027,0.022,0.016);",
-      "col+=vec3(0.07,0.045,0.02)*smoothstep(1.1,0.05,rad)*0.8;",
-      "float rays=pow(max(0.,sin(ang*10.0+t*0.15)), 12.0)*smoothstep(0.9,0.15,rad);",
+      "col+=vec3(0.07,0.045,0.02)*smoothstep(1.1,0.05,radFar)*0.8;",
+      "float rays=pow(max(0.,sin(ang*10.0+t*0.15)), 12.0)*smoothstep(0.9,0.15,radFar);",
       "col+=vec3(0.35,0.24,0.08)*rays*0.18;",
-      "float stone=fbm(p*4.0+vec2(0.0,t*0.02));",
-      "col+=vec3(0.08,0.05,0.02)*stone*smoothstep(1.2,0.2,rad);",
-      "float ring=abs(rad-0.42-0.012*sin(t*0.25));",
+      "float stone=fbm(pFar*4.0+vec2(0.0,t*0.02));",
+      "col+=vec3(0.08,0.05,0.02)*stone*smoothstep(1.2,0.2,radFar);",
+      "float ring=abs(rad-0.42*pr-0.012*sin(t*0.25));",
       "col+=vec3(0.85,0.65,0.28)*0.35*smoothstep(0.03,0.0,ring);",
-      "float ring2=abs(rad-0.28);",
+      "float ring2=abs(rad-0.28*pr);",
       "col+=vec3(0.7,0.5,0.2)*0.18*smoothstep(0.02,0.0,ring2);",
+      "float ring3=abs(radNear-0.58*pr);",
+      "col+=vec3(0.9,0.72,0.32)*0.16*smoothstep(0.018,0.0,ring3);",
       "float ticks=smoothstep(0.018,0.0,abs(mod(ang+t*0.03+3.14159,6.28318/20.0)-3.14159/20.0));",
-      "col+=vec3(0.8,0.6,0.25)*ticks*smoothstep(0.08,0.0,abs(rad-0.42))*0.7;",
-      "float fog=fbm(uv*2.0+vec2(t*0.03,-t*0.02));",
+      "col+=vec3(0.8,0.6,0.25)*ticks*smoothstep(0.08,0.0,abs(radNear-0.42*pr))*0.7;",
+      "float fog=fbm(uv*2.0+vec2(t*0.03,-t*0.02)+par*0.04);",
       "col+=vec3(0.05,0.07,0.07)*fog*0.35;",
+      "col+=vec3(0.18,0.12,0.04)*pulse*0.35*smoothstep(0.85,0.0,rad);",
       "float scan=sin(gl_FragCoord.y*1.7+t*2.0)*0.015;",
       "col+=scan;",
-      "float vig=smoothstep(1.15,0.35,rad);",
+      "float vig=smoothstep(1.15,0.35,radFar);",
       "col*=vig;",
       "gl_FragColor=vec4(col,1.0);",
       "}"
@@ -76,9 +128,19 @@
     const loc = gl.getAttribLocation(prog, "p");
     const uR = gl.getUniformLocation(prog, "r");
     const uT = gl.getUniformLocation(prog, "t");
+    const uPar = gl.getUniformLocation(prog, "par");
+    const uPulse = gl.getUniformLocation(prog, "pulse");
     let alive = true;
+    let last = 0;
     function frame(ts) {
       if (!alive) return;
+      requestAnimationFrame(frame);
+      if (ts - last < 14) return;
+      last = ts;
+      tilt.sx += (tilt.x - tilt.sx) * 0.08;
+      tilt.sy += (tilt.y - tilt.sy) * 0.08;
+      const idleX = Math.sin(ts * 0.00023) * 0.04;
+      const idleY = Math.cos(ts * 0.00019) * 0.03;
       const s = resize(canvas);
       gl.viewport(0, 0, s.w, s.h);
       gl.useProgram(prog);
@@ -87,8 +149,9 @@
       gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       gl.uniform2f(uR, s.w, s.h);
       gl.uniform1f(uT, ts * 0.001);
+      gl.uniform2f(uPar, tilt.sx + idleX, tilt.sy + idleY);
+      gl.uniform1f(uPulse, pulse);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
     return function stop() { alive = false; };
@@ -97,8 +160,16 @@
   function start2D(canvas) {
     const ctx = canvas.getContext("2d");
     let alive = true;
+    let last = 0;
     function frame(ts) {
       if (!alive) return;
+      requestAnimationFrame(frame);
+      if (ts - last < 14) return;
+      last = ts;
+      tilt.sx += (tilt.x - tilt.sx) * 0.08;
+      tilt.sy += (tilt.y - tilt.sy) * 0.08;
+      const idleX = Math.sin(ts * 0.00023) * 0.04;
+      const idleY = Math.cos(ts * 0.00019) * 0.03;
       const s = resize(canvas);
       const w = s.w, h = s.h;
       ctx.setTransform(1,0,0,1,0,0);
@@ -106,31 +177,102 @@
       g.addColorStop(0, "#1a140c"); g.addColorStop(0.5, "#0c0a07"); g.addColorStop(1, "#050403");
       ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
       const t = ts * 0.001;
-      ctx.save();
-      ctx.translate(w/2, h*0.42);
-      const R = Math.min(w,h)*0.28;
-      ctx.strokeStyle = "rgba(212,170,80,0.35)";
-      ctx.lineWidth = 2 * s.dpr;
-      for (let i = 0; i < 3; i++) {
-        ctx.beginPath();
-        ctx.arc(0,0, R*(0.7+i*0.18), 0, Math.PI*2);
-        ctx.stroke();
-      }
-      ctx.rotate(t*0.05);
-      for (let i = 0; i < 20; i++) {
-        const a = i*Math.PI/10;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a)*R*0.85, Math.sin(a)*R*0.85);
-        ctx.lineTo(Math.cos(a)*R*1.05, Math.sin(a)*R*1.05);
-        ctx.strokeStyle = i%5===0 ? "rgba(228,195,122,0.8)" : "rgba(154,117,64,0.5)";
-        ctx.lineWidth = (i%5===0?2.5:1.2)*s.dpr;
-        ctx.stroke();
-      }
-      ctx.restore();
-      requestAnimationFrame(frame);
+      const pr = 1 + pulse * 0.05;
+      const layers = [
+        { d: 0.03, a: 0.25 },
+        { d: 0.07, a: 0.4 },
+        { d: 0.12, a: 0.7 }
+      ];
+      layers.forEach(function (L, li) {
+        ctx.save();
+        ctx.translate(w/2 + (tilt.sx + idleX) * L.d * w, h*0.42 + (tilt.sy + idleY) * L.d * h);
+        const R = Math.min(w,h)*0.28 * pr * (0.85 + li * 0.12);
+        ctx.strokeStyle = "rgba(212,170,80," + L.a + ")";
+        ctx.lineWidth = (2 + li) * s.dpr;
+        ctx.beginPath(); ctx.arc(0,0, R, 0, Math.PI*2); ctx.stroke();
+        if (li === 2) {
+          ctx.rotate(t*0.05);
+          for (let i = 0; i < 20; i++) {
+            const a = i*Math.PI/10;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a)*R*0.85, Math.sin(a)*R*0.85);
+            ctx.lineTo(Math.cos(a)*R*1.05, Math.sin(a)*R*1.05);
+            ctx.strokeStyle = i%5===0 ? "rgba(228,195,122,0.8)" : "rgba(154,117,64,0.5)";
+            ctx.lineWidth = (i%5===0?2.5:1.2)*s.dpr;
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      });
     }
     requestAnimationFrame(frame);
     return function stop() { alive = false; };
+  }
+
+  function startParticles() {
+    if (fxAlive) return;
+    const c = fxCanvas;
+    if (!c) return;
+    fxAlive = true;
+    const ctx = c.getContext("2d");
+    const N = 52;
+    particles.length = 0;
+    for (let i = 0; i < N; i++) {
+      particles.push({
+        x: Math.random(), y: Math.random(),
+        z: 0.25 + Math.random() * 1.15,
+        vx: (Math.random() - 0.5) * 0.00022,
+        vy: -0.00008 - Math.random() * 0.00025,
+        r: 0.6 + Math.random() * 1.8,
+        a: 0.12 + Math.random() * 0.4,
+        spark: Math.random() < 0.18,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    let last = 0;
+    function frame(ts) {
+      if (!fxAlive) return;
+      requestAnimationFrame(frame);
+      if (ts - last < 14) return;
+      const dt = last ? Math.min(32, ts - last) : 16;
+      last = ts;
+      const s = resize(c);
+      const w = c.clientWidth, h = c.clientHeight;
+      ctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const idleX = Math.sin(ts * 0.00023) * 0.04;
+      const idleY = Math.cos(ts * 0.00019) * 0.03;
+      const px = tilt.sx + idleX, py = tilt.sy + idleY;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.vx * dt + Math.sin(ts * 0.0007 + p.phase) * 0.000012 * dt;
+        p.y += p.vy * dt;
+        if (p.y < -0.05) { p.y = 1.05; p.x = Math.random(); }
+        if (p.x < -0.08) p.x = 1.08;
+        if (p.x > 1.08) p.x = -0.08;
+        const dx = (p.x - 0.5 + px * 0.07 * p.z) * w;
+        const dy = (p.y - 0.5 + py * 0.07 * p.z) * h;
+        const x = w / 2 + dx, y = h / 2 + dy;
+        const tw = 0.65 + 0.35 * Math.sin(ts * 0.002 + p.phase);
+        const alpha = p.a * tw * (0.55 + 0.45 * p.z);
+        ctx.beginPath();
+        if (p.spark) {
+          const rr = p.r * (0.8 + p.z * 0.5) * (1 + pulse * 0.3);
+          ctx.fillStyle = "rgba(255,230,170," + (alpha * 0.95) + ")";
+          ctx.moveTo(x, y - rr * 2.2);
+          ctx.lineTo(x + rr * 0.5, y);
+          ctx.lineTo(x, y + rr * 2.2);
+          ctx.lineTo(x - rr * 0.5, y);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "rgba(228,195,122," + alpha + ")";
+          ctx.arc(x, y, p.r * (0.7 + p.z * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
   }
 
   /* ---------------- Glyphen ---------------- */
@@ -461,5 +603,5 @@
     drawGlyph(ctx, tz.signIndex, cx, cy - R * 0.02, R * 0.32, { width: 2, blur: 8 });
   }
 
-  global.ChronosGfx = { startBackground, drawGlyph, drawBarsDots, drawWheel, GOLD };
+  global.ChronosGfx = { startBackground, drawGlyph, drawBarsDots, drawWheel, GOLD, setTilt, setPulse, getPulse };
 })(window);
