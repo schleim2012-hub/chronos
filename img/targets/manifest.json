@@ -1,0 +1,98 @@
+[
+  {
+    "id": "pyramide",
+    "label": "Eine steinerne Stufenpyramide",
+    "file": "img/targets/pyramide.jpg",
+    "license": "CC BY-SA 3.0",
+    "artist": "Fcb981",
+    "source": "El Castillo Stitch 2008 Edit 2.jpg"
+  },
+  {
+    "id": "wasserfall",
+    "label": "Ein hoher Wasserfall",
+    "file": "img/targets/wasserfall.jpg",
+    "license": "CC BY-SA 4.0",
+    "artist": "Martin Falbisoner",
+    "source": "Skógafoss July 2014.JPG"
+  },
+  {
+    "id": "leuchtturm",
+    "label": "Ein Leuchtturm an felsiger Küste",
+    "file": "img/targets/leuchtturm.jpg",
+    "license": "CC BY-SA 3.0",
+    "artist": "– Wladyslaw [Disk.]",
+    "source": "Peggys Cove - NS - Leuchtturm bei Sonnenuntergang.jpg"
+  },
+  {
+    "id": "wald",
+    "label": "Ein dicht bemooster Wald",
+    "file": "img/targets/wald.jpg",
+    "license": "CC BY-SA 4.0",
+    "artist": "King of Hearts",
+    "source": "Hoh Rain Forest Olympic June 2018 004.jpg"
+  },
+  {
+    "id": "bruecke",
+    "label": "Eine antike Steinbrücke",
+    "file": "img/targets/bruecke.jpg",
+    "license": "CC BY-SA 3.0",
+    "artist": "Benh LIEU SONG ( Flickr )",
+    "source": "Pont du Gard BLS.jpg"
+  },
+  {
+    "id": "vulkan",
+    "label": "Ein schneebedeckter Vulkan im Abendlicht",
+    "file": "img/targets/vulkan.jpg",
+    "license": "CC0",
+    "artist": "Romain Guy from San Francisco, USA",
+    "source": "Mount Fuji at sunset, March 2025.jpg"
+  },
+  {
+    "id": "tempel",
+    "label": "Ein Tempel im Dschungel",
+    "file": "img/targets/tempel.jpg",
+    "license": "CC BY 4.0",
+    "artist": "Jan Harenburg",
+    "source": "Palenque temple 1.jpg"
+  },
+  {
+    "id": "wueste",
+    "label": "Rote Sanddünen in der Wüste",
+    "file": "img/targets/wueste.jpg",
+    "license": "CC BY-SA 2.5",
+    "artist": "Luca Galuzzi ( Lucag )",
+    "source": "Sossusvlei Dune Namib Desert Namibia Luca Galuzzi 2004.JPG"
+  },
+  {
+    "id": "see",
+    "label": "Ein türkiser Bergsee",
+    "file": "img/targets/see.jpg",
+    "license": "CC BY-SA 4.0",
+    "artist": "Tobias Alt, Tobi 87",
+    "source": "Moraine Lake-Banff NP.JPG"
+  },
+  {
+    "id": "canyon",
+    "label": "Eine weite Felsschlucht im Abendrot",
+    "file": "img/targets/canyon.jpg",
+    "license": "CC0",
+    "artist": "Mgimelfarb",
+    "source": "Grand Canyon South Rim at Sunset.jpg"
+  },
+  {
+    "id": "statue",
+    "label": "Große Steinstatuen in einer Landschaft",
+    "file": "img/targets/statue.jpg",
+    "license": "Public domain",
+    "artist": "Aurbina",
+    "source": "Moai Rano raraku.jpg"
+  },
+  {
+    "id": "hoehle",
+    "label": "Eine Meereshöhle mit Basaltsäulen",
+    "file": "img/targets/hoehle.jpg",
+    "license": "CC BY-SA 4.0",
+    "artist": "Thecheeseistalking99",
+    "source": "Fingal's Cave Interior.jpg"
+  }
+]
