@@ -1,22 +1,22 @@
 # CHRONOS — The Hidden Archive
 
-Ein kurzer Prototyp: ein digitales Grimoire für das Handy. Du bist der Archivar und setzt verlorene Fragmente zusammen. Dunkle, mystische High-Tech-Stimmung – Cyberpunk trifft auf antike Tempel.
+Ein digitales Grimoire für das Handy. Du bist der Archivar und setzt verlorene Fragmente zusammen. Dunkle, mystische High-Tech-Stimmung – Cyberpunk trifft auf antike Tempel.
 
-## Was drin ist
+## Version 1.1
 
-- **Tzolkin-Kalender** mit Tageszeichen, Zahl 1–13, Glyphe, Bedeutung und einem Rad der 260 Tage. Vor und zurück blättern.
-- **Archiv** mit drei verschlüsselten Fragmenten (Flut, Maya, digitale Zensur). Beim Öffnen werden sie entschlüsselt.
-- **Remote-Viewing-Trainer** mit 5-Minuten-Timer, Notizen, Zeichenfläche, zufälligem Zielbild und Sitzungsprotokoll.
-
-Alles läuft offline auf dem Gerät. Die Tzolkin-Berechnung nutzt die GMT-Korrelation 584283 (Start 4 Ajaw) und den Julian Day. Geprüft: 21.12.2012 = 4 Ajaw; 27.11.2026 = 10 Muluk.
+- Parallax-Hintergrund (Kippen / Zeiger) und goldene Staubpartikel
+- Ton in drei Modi: Stille, 432-Hz-Fläche, binaurale Beats (Kopfhörer empfohlen)
+- Liminale Mandala-Malerei mit Galerie
+- Atem-Synchronizer (Box Breathing 4-4-4-4)
+- Intention als Wasserzeichen vor Archiv und Remote Viewing
+- Traum-Decoder: 20-Minuten-Nap, Gong, Journal
+- Stufen durch Praxis: Initiat, Seher, Archivar
 
 ## Download
 
 - App: [Chronos.apk](https://schleim2012-hub.github.io/chronos/Chronos.apk)
 - Web: [https://schleim2012-hub.github.io/chronos/](https://schleim2012-hub.github.io/chronos/)
 
-## Hinweise
+Die Tzolkin-Berechnung nutzt die GMT-Korrelation 584283. Geprüft: 21.12.2012 = 4 Ajaw; 27.11.2026 = 10 Muluk.
 
-Die Archivtexte sind als Lore und Spur formuliert, nicht als belegte Tatsachen. Die Zielbilder stammen von Wikimedia Commons (siehe `www/img/CREDITS.txt`). Schriften: Cinzel, Cormorant Garamond und Share Tech Mono (SIL Open Font License).
-
-Gebaut als Web-App in einer Android-APK, Hochformat.
+Die Archivtexte sind Lore, keine belegten Tatsachen. Zielbilder: Wikimedia Commons (siehe `www/img/CREDITS.txt`). Schriften: Cinzel, Cormorant Garamond, Share Tech Mono (SIL OFL).

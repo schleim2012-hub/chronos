@@ -91,7 +91,9 @@
           <span class="chev">›</span>
         </button>
       </nav>
+      <p class="stage-chip" id="menu-stage">Stufe 1 · Initiat</p>
       <p class="foot" id="menu-foot">Archivar bereit</p>
+      <button class="options-link" type="button" data-go="optionen">Optionen</button>
     </section>
 
     <section id="screen-kalender" class="screen is-hidden" data-screen="kalender">
@@ -257,12 +259,38 @@
         </div>
       </div>
     </section>
+
+    <section id="screen-optionen" class="screen is-hidden" data-screen="optionen">
+      <div class="chrome">
+        <button class="icon-btn back-btn" type="button" data-back>‹ ZURÜCK</button>
+        <h1>Optionen</h1>
+        <button class="icon-btn" type="button" data-mute>TON</button>
+      </div>
+      <div class="scroll">
+        <p class="file-intro">Der Ton-Knopf wechselt zwischen Stille, einer 432-Hz-Fläche und binauralen Beats. Im dritten Modus sind Kopfhörer empfohlen.</p>
+        <p class="file-intro">Die Stufe wächst durch Praxis: drei Remote-Viewing-Sitzungen öffnen den Atem, sieben verschiedene Nutzungstage öffnen alle Archivtexte und den Traum-Decoder.</p>
+        <p class="stage-chip" id="opt-stage" style="margin:16px auto">Stufe 1 · Initiat</p>
+        <p class="kin" id="opt-stats" style="text-align:center"></p>
+        <p class="options-link" id="opt-version">CHRONOS 1.1</p>
+        <div id="opt-test" class="hidden" style="margin-top:18px;text-align:center">
+          <button class="text-btn" type="button" id="opt-unlock">Alle Stufen freischalten</button>
+          <p class="file-intro" id="opt-unlock-note" style="margin-top:10px">Nur zum Prüfen. Die Praxis-Zählung bleibt erhalten.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="unlock-veil" id="unlock-veil">
+    <div class="seal-wrap" style="width:140px;height:140px"><img src="img/ui/seal.png" alt=""></div>
+    <h2 id="unlock-title">Stufe 2 · Seher</h2>
+    <p id="unlock-text">Ein neuer Raum ist offen.</p>
   </div>
 
   <script src="js/tzolkin.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/gfx.js"></script>
   <script src="js/mandala.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

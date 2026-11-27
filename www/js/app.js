@@ -136,11 +136,13 @@
     if (name === "intention") enterIntention();
     if (name === "atem") enterAtem();
     if (name === "traum") enterTraum();
+    if (name === "optionen") enterOptionen();
+    if (name === "menu") ChronosProgress && ChronosProgress.recordVisit();
   }
 
   /* ---------- Siegel / Boot ---------- */
   const BOOT_LINES = [
-    { t: 200, s: "> CHRONOS · KERN 0.1" },
+    { t: 200, s: "> CHRONOS · KERN 1.1" },
     { t: 700, s: "> Prüfung der Siegel ………… " },
     { t: 1150, s: "OK", ok: true, same: true },
     { t: 1500, s: "> Tzolkin-Modul ………… gebunden" },
@@ -234,13 +236,31 @@
   }
 
   function renderMenu() {
+    if (window.ChronosProgress) ChronosProgress.recordVisit();
     const tz = Tzolkin.tzolkinFromDate(new Date());
     $("menu-today").textContent = "Heute · " + tz.label;
     const n = state.unlocked.length;
     $("menu-foot").textContent = n === 0
       ? "Noch kein Fragment entschlüsselt"
       : "Fragment " + n + "/3 entschlüsselt";
+    if ($("menu-stage") && window.ChronosProgress) $("menu-stage").textContent = ChronosProgress.label();
     paintMenuIcons();
+    ["atem", "traum"].forEach(function (name) {
+      const card = $("card-" + name);
+      if (!card || !window.ChronosProgress) return;
+      const locked = !ChronosProgress.canEnter(name);
+      card.classList.toggle("is-locked", locked);
+      card.disabled = false;
+      let note = card.querySelector(".lock-note");
+      if (locked) {
+        if (!note) {
+          note = document.createElement("span");
+          note.className = "lock-note";
+          card.querySelector("div").appendChild(note);
+        }
+        note.textContent = ChronosProgress.lockHint(name);
+      } else if (note) note.remove();
+    });
   }
 
   /* ---------- Kalender ---------- */
@@ -283,14 +303,19 @@
     box.innerHTML = "";
     FRAGMENTS.forEach(function (f, i) {
       const open = state.unlocked.indexOf(f.id) !== -1;
+      const allowed = !window.ChronosProgress || ChronosProgress.canOpenFragment(i) || open;
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "file" + (open ? " is-open" : "");
-      btn.innerHTML = '<span class="state">' + (open ? "ENTSCHLÜSSELT" : "VERSIEgelt") + "</span>"
-        + '<p class="code">' + f.code + "</p><h3>" + f.title + "</h3><p>" + f.teaser + "</p>";
-      // typo VERSIEgelt - fix
-      btn.querySelector(".state").textContent = open ? "ENTSCHLÜSSELT" : "VERSIEGELT";
-      btn.addEventListener("click", function () { openFragment(f); });
+      btn.className = "file" + (open ? " is-open" : "") + (!allowed ? " is-locked" : "");
+      const hint = (!allowed && window.ChronosProgress) ? ChronosProgress.lockHint("archiv-more") : "";
+      btn.innerHTML = '<span class="state"></span>'
+        + '<p class="code">' + f.code + "</p><h3>" + f.title + "</h3><p>" + f.teaser + "</p>"
+        + (hint ? '<span class="lock-note">' + hint + "</span>" : "");
+      btn.querySelector(".state").textContent = !allowed ? "VERSIEGELT" : (open ? "ENTSCHLÜSSELT" : "VERSIEGELT");
+      btn.addEventListener("click", function () {
+        if (!allowed) { ChronosAudio.glitch(); vibrate(8); return; }
+        openFragment(f);
+      });
       box.appendChild(btn);
     });
   }
@@ -447,6 +472,7 @@
     const log = loadLog();
     log.unshift(entry);
     saveLog(log);
+    if (window.ChronosProgress) ChronosProgress.maybePromote();
     $("rv-image").src = rv.target.file;
     $("rv-caption").textContent = rv.target.label;
     const bits = [];
@@ -854,7 +880,7 @@
       show("archiv");
       return true;
     }
-    if (current === "intention") {
+    if (current === "intention" || current === "optionen") {
       show("menu");
       return true;
     }
@@ -991,21 +1017,91 @@
     ChronosGfx.startBackground($("bg"));
     ChronosAudio.initMuteState();
     paintWatermark();
+    if (window.ChronosProgress) {
+      ChronosProgress.onPromote(showUnlock);
+    }
+    bindOptionenSecret();
     document.getElementById("screen-seal").classList.add("is-active");
     bind();
     paintMenuIcons();
   }
 
-  window.ChronosOpen = {
+  function enterOptionen() {
+    if ($("opt-stage") && window.ChronosProgress) $("opt-stage").textContent = ChronosProgress.label();
+    if ($("opt-stats") && window.ChronosProgress) {
+      $("opt-stats").textContent = "Remote Viewing: " + ChronosProgress.rvCount() + "  ·  Nutzungstage: " + ChronosProgress.dayCount();
+    }
+    if (window.ChronosProgress && ChronosProgress.isTest()) {
+      $("opt-test").classList.remove("hidden");
+      $("opt-unlock").textContent = "Test-Freischaltung lösen";
+    }
+  }
+
+  function showUnlock(to, from) {
+    const veil = $("unlock-veil");
+    if (!veil) return;
+    const names = { 2: ["Stufe 2 · Seher", "Der Atem-Synchronizer ist jetzt offen."], 3: ["Stufe 3 · Archivar", "Alle Fragmente und der Traum-Decoder sind frei."] };
+    const pair = names[to] || ["Neue Stufe", "Ein neuer Raum ist offen."];
+    $("unlock-title").textContent = pair[0];
+    $("unlock-text").textContent = pair[1];
+    veil.classList.add("is-on");
+    ChronosAudio.reveal();
+    vibrate([20, 40, 35]);
+    setTimeout(function () { veil.classList.remove("is-on"); }, 2800);
+    if (current === "menu") renderMenu();
+  }
+
+  function bindOptionenSecret() {
+    const ver = $("opt-version");
+    if (!ver) return;
+    let hold = 0, timer = 0;
+    function down() {
+      hold = Date.now();
+      timer = setTimeout(function () {
+        $("opt-test").classList.remove("hidden");
+        ChronosAudio.glitch();
+        vibrate(30);
+      }, 2000);
+    }
+    function up() { clearTimeout(timer); }
+    ver.addEventListener("pointerdown", down);
+    ver.addEventListener("pointerup", up);
+    ver.addEventListener("pointerleave", up);
+    ver.addEventListener("touchstart", down, { passive: true });
+    ver.addEventListener("touchend", up);
+    $("opt-unlock").addEventListener("click", function () {
+      const on = !ChronosProgress.isTest();
+      ChronosProgress.unlockAll(on);
+      $("opt-unlock").textContent = on ? "Test-Freischaltung lösen" : "Alle Stufen freischalten";
+      $("opt-stage").textContent = ChronosProgress.label();
+      ChronosAudio.bell(on ? 524 : 330, 0.9, 0.08);
+      if (on) showUnlock(3, 1);
+    });
+  }
+
+
+    window.ChronosOpen = {
     setCalDate: function (y, m, d) {
       state.calDate = new Date(y, m - 1, d);
       if (current === "kalender") renderCalendar();
     },
     skipTo: function (name) {
       ChronosAudio.unlock();
+      state.intentAsked = true;
       show(name);
     },
-    unlocked: function () { return state.unlocked.slice(); }
+    requestScreen: requestScreen,
+    unlocked: function () { return state.unlocked.slice(); },
+    startNap: startNap,
+    startAtem: startAtem,
+    stopAtem: stopAtem,
+    unlockAll: function (on) {
+      ChronosProgress.unlockAll(on !== false);
+      if (current === "menu") renderMenu();
+      if (current === "optionen") enterOptionen();
+    },
+    setIntention: setIntention,
+    stage: function () { return ChronosProgress.stage(); }
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
